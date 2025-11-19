@@ -3,10 +3,10 @@ name: Hot News Crawler
 on:
   schedule:
     # 我们使用的是 github 官方提供的资源来进行的推送，而每个账号的资源是限额的，为了不被官方判定为滥用而面临封号的风险，不建议比半小时更低
-    - cron: "0 * * * *" # 每小时整点运行一次(实际有偏差) 或者 "*/30 * * * *" (每半小时执行一次) 或者 "*/30 0-14 * * *"(每天早上 8 点到晚上 10 点期间，每半小时运行一次)
+    - cron: "0 * * * *"
   workflow_dispatch:
 
-# 添加权限设置（Pages 需要 pages + id-token）
+# Pages 需要 pages + id-token
 permissions:
   contents: write
   pages: write
@@ -85,7 +85,7 @@ jobs:
           else
             echo "Summary file not found: $summary_file"
           fi
-      
+
       - name: Commit and push if changes
         run: |
           git config --global user.name 'GitHub Actions'
@@ -93,9 +93,15 @@ jobs:
           git add -A
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" && git push)
 
-  # 新增：把 ./output 发布到 GitHub Pages
+      # ✅ 关键：在 crawl 这里上传 output 作为 Pages artifact
+      - name: Upload output directory as artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./output
+
+  # 只负责发布，不再做 checkout/upload
   deploy:
-    needs: crawl          # 等 crawl 跑完再部署
+    needs: crawl
     runs-on: ubuntu-latest
 
     environment:
@@ -103,14 +109,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Upload output directory as artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./output    # 直接用你现有的 output 目录
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
