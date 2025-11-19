@@ -66,6 +66,26 @@ jobs:
           GITHUB_ACTIONS: true
         run: python main.py
 
+      - name: Copy latest summary to index.html
+        run: |
+          # 找到 output 目录下最新的日期目录
+          latest_dir=$(ls -d output/*/ 2>/dev/null | sort | tail -n 1 || echo "")
+          echo "Latest dir: $latest_dir"
+
+          if [ -z "$latest_dir" ]; then
+            echo "No output directory found, skip index.html update."
+            exit 0
+          fi
+
+          summary_file="$latest_dir/html/当日汇总.html"
+
+          if [ -f "$summary_file" ]; then
+            cp "$summary_file" output/index.html
+            echo "Copied $summary_file to output/index.html"
+          else
+            echo "Summary file not found: $summary_file"
+          fi
+      
       - name: Commit and push if changes
         run: |
           git config --global user.name 'GitHub Actions'
